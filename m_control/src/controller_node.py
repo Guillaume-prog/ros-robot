@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import rospy
-from geometry_msgs.msg import Twist
+from m_control.msg import MoveCommand
 from joystick_obj import *
 
 
@@ -10,33 +10,27 @@ class ControllerNode(Controller):
         super().__init__()
         rospy.init_node('joystick_controller')
 
-        self.pub = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
+        self.pub_msg = MoveCommand()
+
+        self.pub = rospy.Publisher('/cmd_vel', MoveCommand, queue_size=1)
         rospy.Timer(rospy.Duration(0.1), self.send_command, oneshot=False)
         rospy.on_shutdown(self.shutdown)
-        
-        self.x = 0
-        self.y = 0
 
     def shutdown(self):
         self.running = False
 
-
     def send_command(self, msg):
-        pub_msg = Twist()
-        self.pub.publish(pub_msg)
-
-
-    def on_button_pressed(self, button_id):
-        if button_id == BUTTON_TRIANGLE:
-            print('hi')
+        self.pub.publish(self.pub_msg)
 
     def on_joystick_move(self, joystick_id, value):
+        trunc_value = round(value if abs(value) > 0.1 else 0, 2)
+        
         if joystick_id == L3_X:
-            self.x = value
+            self.pub_msg.angular = trunc_value
         elif joystick_id == L3_Y:
-            self.y = value
-
-        print(self.x, self.y)
+            self.pub_msg.linear = -trunc_value
+        elif joystick_id == R2_Y:
+            self.pub_msg.speed = (trunc_value + 1) / 2
 
     
 
